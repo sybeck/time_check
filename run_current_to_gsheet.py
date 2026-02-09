@@ -12,7 +12,6 @@ load_dotenv()
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-import os
 import tempfile
 
 # ✅ TEMP/TMP 강제 (Playwright import 전에!)
@@ -21,6 +20,8 @@ os.environ["TEMP"] = r"C:\temp"
 os.environ["TMP"] = r"C:\temp"
 tempfile.tempdir = r"C:\temp"
 
+# ✅ 해결 1: Playwright temp 경로를 안정적으로 고정 (서브프로세스에도 동일 적용)
+SAFE_TEMP_DIR = r"C:\Temp"
 
 KST = timezone(timedelta(hours=9))
 
@@ -99,9 +100,33 @@ def index_to_col(n: int) -> str:
 def run_script_json(py_path: str, args: List[str]) -> Dict[str, Any]:
     """
     스크립트를 실행하고 stdout의 마지막 JSON 라인을 파싱
+
+    ✅ 해결 1 적용 (원본 구조 유지 + 최소 변경)
+    - 서브프로세스에 TEMP/TMP를 C:\\Temp로 강제 전달 → Playwright mkdtemp ENOENT 방지
+    - 서브프로세스에 UTF-8 강제 → UnicodeEncodeError(charmap) 방지
     """
+    # TEMP 폴더가 없으면 파이썬에서 생성 (CMD/스케줄러에서도 안전)
+    os.makedirs(SAFE_TEMP_DIR, exist_ok=True)
+
+    env = os.environ.copy()
+
+    # 1) Playwright artifacts temp 안정화
+    env["TEMP"] = SAFE_TEMP_DIR
+    env["TMP"] = SAFE_TEMP_DIR
+    env["TMPDIR"] = SAFE_TEMP_DIR  # 일부 케이스 대비
+
+    # 2) Windows 콘솔 인코딩 이슈 방지 (서브프로세스 파이썬 출력 UTF-8 강제)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+
     cmd = ["python", py_path] + args
-    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    p = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,  # ✅ 핵심: 서브프로세스에 환경변수 전달
+    )
     if p.returncode != 0:
         raise RuntimeError(
             f"[SCRIPT FAIL] {py_path}\n"
@@ -116,7 +141,9 @@ def run_script_json(py_path: str, args: List[str]) -> Dict[str, Any]:
     try:
         return json.loads(last)
     except Exception:
-        raise RuntimeError(f"[SCRIPT JSON PARSE FAIL] {py_path}\nlast_line={last}\nFULL_STDOUT:\n{p.stdout}")
+        raise RuntimeError(
+            f"[SCRIPT JSON PARSE FAIL] {py_path}\nlast_line={last}\nFULL_STDOUT:\n{p.stdout}"
+        )
 
 
 def get_sheets_service():
@@ -327,14 +354,12 @@ def main():
         f"• 메타 광고비: {bz['spend']:,.0f}\n"
         f"• 구매수: {bz['purchases']:,}\n"
         f"• 현재 매출: {bz['revenue']:,}\n"
-        
         f"\n*✅브레인올로지*\n"
         f"• ROAS: {bio['roas']:,.2f}\n"
         f"• CPA: {bio['cpa']:,.2f}\n"
         f"• 메타 광고비: {bio['spend']:,.0f}\n"
         f"• 구매수: {bio['purchases']:,}\n"
         f"• 현재 매출: {bio['revenue']:,}\n"
-
     )
 
     slack_post(msg)
