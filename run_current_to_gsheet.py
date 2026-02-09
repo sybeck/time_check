@@ -28,7 +28,7 @@ KST = timezone(timedelta(hours=9))
 SPREADSHEET_ID = "1DeSRVN4pWf6rnp1v_FeePUYe1ngjwyq_znXZUzl_kbM"
 
 # ✅ 슬롯 허용 범위(분): 각 시간 슬롯 기준 ±N분
-SLOT_TOLERANCE_MINUTES = 90
+SLOT_TOLERANCE_MINUTES = 30
 
 # 시간 슬롯(각각 ±SLOT_TOLERANCE_MINUTES분)
 SLOTS = [
@@ -346,17 +346,17 @@ def main():
     bio = compute_roas_cpa_for_brand("brainology", cafe24_res, coupang_res, naver_res, meta_res)
 
     msg = (
-        f"*👀현재 ROAS/CPA 알림*\n"
+        f"*👀 현재 ROAS/CPA 알림*\n"
         f"- 날짜: {ymd} / 슬롯: {slot_label}\n"
-        f"\n*✅부담제로*\n"
+        f"\n*✅ 부담제로*\n"
         f"• ROAS: {bz['roas']:,.2f}\n"
-        f"• CPA: {bz['cpa']:,.2f}\n"
+        f"• CPA: {bz['cpa']:,.0f}\n"
         f"• 메타 광고비: {bz['spend']:,.0f}\n"
         f"• 구매수: {bz['purchases']:,}\n"
         f"• 현재 매출: {bz['revenue']:,}\n"
-        f"\n*✅브레인올로지*\n"
+        f"\n*✅ 브레인올로지*\n"
         f"• ROAS: {bio['roas']:,.2f}\n"
-        f"• CPA: {bio['cpa']:,.2f}\n"
+        f"• CPA: {bio['cpa']:,.0f}\n"
         f"• 메타 광고비: {bio['spend']:,.0f}\n"
         f"• 구매수: {bio['purchases']:,}\n"
         f"• 현재 매출: {bio['revenue']:,}\n"
