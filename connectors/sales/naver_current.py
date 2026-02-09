@@ -21,6 +21,9 @@ PRODUCT_ORDERS_URL = f"{API_BASE}/v1/pay-order/seller/product-orders"
 TOKEN_CACHE_FILE = ".naver_token_cache.json"
 KST = timezone(timedelta(hours=9))
 
+# ✅ runner(run_current_to_gsheet.py)가 기대하는 브랜드 키
+RUNNER_BRANDS = ("burdenzero", "brainology")
+
 
 # ---------------------------
 # Time helpers (Asia/Seoul)
@@ -198,9 +201,10 @@ def get_daily_metrics(target_date: datetime.date, force_token: bool = False, raw
         "source": "naver",
         "date": "YYYY-MM-DD",
         "sales": int,
-        "orders": int,              # 유니크 orderId 기준 (구매수)
-        "product_order_count": int, # 라인아이템 기준
+        "orders": int,
+        "product_order_count": int,
         "status_counter": {...},
+        "mapped": { ... }           # ✅ runner 호환용
       }
     """
     load_dotenv()
@@ -250,16 +254,26 @@ def get_daily_metrics(target_date: datetime.date, force_token: bool = False, raw
             print(json.dumps(row, ensure_ascii=False, indent=2)[:4000])
             sample_printed += 1
 
+    total_sales = int(sales_amount)
+    total_orders = int(len(order_ids))
+
+    # ✅ 핵심 수정: 네이버 매출/구매수는 모두 부담제로로만 집계
+    mapped = {
+        "burdenzero": {"sales": total_sales, "orders": total_orders},
+        "brainology": {"sales": 0, "orders": 0},
+    }
+
     return {
         "status": "ok",
         "source": "naver",
         "date": target_date.strftime("%Y-%m-%d"),
-        "sales": int(sales_amount),
-        "orders": int(len(order_ids)),  # 유니크 orderId 기준
+        "sales": total_sales,
+        "orders": total_orders,  # 유니크 orderId 기준
         "product_order_count": int(product_order_count),
         "status_counter": dict(status_counter) if status_counter else {},
         "from": from_iso,
         "to": to_iso,
+        "mapped": mapped,
     }
 
 
