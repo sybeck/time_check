@@ -12,13 +12,22 @@ load_dotenv()
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+import os
+import tempfile
+
+# ✅ TEMP/TMP 강제 (Playwright import 전에!)
+os.makedirs(r"C:\temp", exist_ok=True)
+os.environ["TEMP"] = r"C:\temp"
+os.environ["TMP"] = r"C:\temp"
+tempfile.tempdir = r"C:\temp"
+
 
 KST = timezone(timedelta(hours=9))
 
 SPREADSHEET_ID = "1DeSRVN4pWf6rnp1v_FeePUYe1ngjwyq_znXZUzl_kbM"
 
 # ✅ 슬롯 허용 범위(분): 각 시간 슬롯 기준 ±N분
-SLOT_TOLERANCE_MINUTES = 70
+SLOT_TOLERANCE_MINUTES = 90
 
 # 시간 슬롯(각각 ±SLOT_TOLERANCE_MINUTES분)
 SLOTS = [
