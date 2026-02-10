@@ -211,19 +211,77 @@ def append_sheet_values(svc, sheet_name: str, a1: str, values: List[List[Any]]):
     )
 
 
+# ✅✅✅ 여기부터 수정(핵심): "마지막 행이 오늘이면 재사용" + 날짜 문자열 정규화
+def _normalize_ymd(value: Any) -> str:
+    """
+    시트 A열 값이 '2026-02-10', '2026. 2. 10', '2026-02-10 00:00:00' 등으로 와도
+    최대한 YYYY-MM-DD로 정규화해서 비교.
+    실패하면 원본 문자열 strip 반환.
+    """
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if not s:
+        return ""
+
+    # 1) 날짜+시간이 붙는 경우 앞 10자리 우선 시도 (YYYY-MM-DD...)
+    if len(s) >= 10:
+        head10 = s[:10]
+        try:
+            return datetime.strptime(head10, "%Y-%m-%d").date().strftime("%Y-%m-%d")
+        except Exception:
+            pass
+
+    # 2) 'YYYY.MM.DD' / 'YYYY. M. D' 형태
+    s2 = s.replace(".", "-").replace("/", "-")
+    # '2026-2-10' 같은 형태도 처리
+    parts = s2.split()
+    s2 = parts[0] if parts else s2
+    try:
+        dt = datetime.strptime(s2, "%Y-%m-%d")
+        return dt.date().strftime("%Y-%m-%d")
+    except Exception:
+        # 월/일이 1자리인 경우: 직접 파싱
+        try:
+            y, m, d = s2.split("-")
+            if y.isdigit() and m.isdigit() and d.isdigit():
+                return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+        except Exception:
+            pass
+
+    return s
+
+
 def find_or_create_today_row(svc, sheet_name: str, ymd: str) -> int:
     """
-    A열에서 오늘(ymd) 찾고 있으면 row index 반환(1-based).
-    없으면 맨 아래에 추가하고 그 row 반환.
+    ✅ 변경 요구사항 반영:
+    - A열의 "마지막으로 채워진 행"이 오늘(ymd)이면 그 행(row index)을 반환
+    - 아니면 맨 아래에 오늘 날짜를 추가하고 그 row 반환
+
+    (기존: A열 전체에서 오늘을 찾고 없으면 append → 날짜 포맷/공백 문제로 매번 append 될 수 있었음)
     """
     colA = get_sheet_values(svc, sheet_name, "A:A")
-    for i, row in enumerate(colA, start=1):
-        if row and str(row[0]).strip() == ymd:
-            return i
 
+    # 마지막으로 값이 있는 행 찾기 (끝에 빈 행들이 있어도 안전)
+    last_filled_row_idx = 0
+    last_value = ""
+    for i in range(len(colA), 0, -1):  # 1-based row index
+        row = colA[i - 1]
+        if row and str(row[0]).strip():
+            last_filled_row_idx = i
+            last_value = row[0]
+            break
+
+    # 마지막 행이 오늘이면 그 행 재사용
+    if last_filled_row_idx > 0:
+        if _normalize_ymd(last_value) == ymd:
+            return last_filled_row_idx
+
+    # 아니면 새 행 append
     append_sheet_values(svc, sheet_name, "A:A", [[ymd]])
     colA2 = get_sheet_values(svc, sheet_name, "A:A")
     return len(colA2) if colA2 else 1
+# ✅✅✅ 수정 끝
 
 
 def build_row_payload(
