@@ -407,17 +407,14 @@ def main():
         f"*👀 현재 ROAS/CPA 알림*\n"
         f"- 날짜: {ymd} / 슬롯: {slot_label}\n"
         f"\n*✅ 부담제로*\n"
-        f"• ROAS: {bz['roas']:,.2f}\n"
-        f"• CPA: {bz['cpa']:,.0f}\n"
+        f"• 현재 매출 {bz['revenue']:,} / {bz['purchases']:,}\n"
+        f"• ROAS {bz['roas']:,.2f} / CPA {bz['cpa']:,.0f}\n"
         f"• 메타 광고비: {bz['spend']:,.0f}\n"
-        f"• 구매수: {bz['purchases']:,}\n"
-        f"• 현재 매출: {bz['revenue']:,}\n"
+        
         f"\n*✅ 브레인올로지*\n"
-        f"• ROAS: {bio['roas']:,.2f}\n"
-        f"• CPA: {bio['cpa']:,.0f}\n"
+        f"• 현재 매출 {bio['revenue']:,} / {bio['purchases']:,}\n"
+        f"• ROAS {bio['roas']:,.2f} / CPA {bio['cpa']:,.0f}\n"
         f"• 메타 광고비: {bio['spend']:,.0f}\n"
-        f"• 구매수: {bio['purchases']:,}\n"
-        f"• 현재 매출: {bio['revenue']:,}\n"
     )
 
     slack_post(msg)
